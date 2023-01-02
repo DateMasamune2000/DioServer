@@ -23,7 +23,7 @@ pub fn main() !void {
 fn handleClient(allocator: mem.Allocator, connection: StreamServer.Connection) !void {
     defer connection.stream.close();
 
-    // var client_writer = connection.stream.writer();
+    var client_writer = connection.stream.writer();
     var client_reader = connection.stream.reader();
 
     var line = try client_reader.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
@@ -39,7 +39,6 @@ fn handleClient(allocator: mem.Allocator, connection: StreamServer.Connection) !
 
     while (true) {
         line = try client_reader.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
-        defer allocator.free(line);
 
         if (line.len == 1 and mem.eql(u8, line, "\r")) break;
 
@@ -57,4 +56,6 @@ fn handleClient(allocator: mem.Allocator, connection: StreamServer.Connection) !
     while (i.next()) |entry| {
         std.debug.print("{s} : {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
     }
+
+    try client_writer.print("{s}\r\n{s}\r\n{s}\r\n\r\n{s}\r\n\r\n", .{ "HTTP/1.1 200 OK", "Content-Type: text/plain", "Content-Length: 10", "dank memes" });
 }
