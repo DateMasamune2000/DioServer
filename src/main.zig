@@ -12,6 +12,17 @@ pub const WebHeader = struct {
     optionals_list: std.StringHashMap([]const u8),
 };
 
+pub const WebParameter = struct { key: []const u8, value: []const u8 };
+
+pub const MimeType = struct { type: []const u8, subtype: []const u8, parameter: WebParameter };
+
+pub const WebResponse = struct {
+    version: []const u8,
+    code: u16,
+    type: MimeType,
+    content: []const u8,
+};
+
 pub fn main() !void {
     var my_server = StreamServer.init(.{ .reuse_address = true });
     var gpa = GeneralPurposeAllocator(.{}){};
@@ -37,8 +48,17 @@ fn handleClient(allocator: mem.Allocator, connection: StreamServer.Connection) !
         std.debug.print("{s} : {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
     }
 
-    var client_writer = connection.stream.writer();
-    try client_writer.print("{s}\r\n{s}\r\n{s}\r\n\r\n{s}\r\n\r\n", .{ "HTTP/1.1 200 OK", "Content-Type: text/plain", "Content-Length: 10", "dank memes" });
+    var response = WebResponse{
+        .version = headers.version[0 .. headers.version.len - 1],
+        .code = 200,
+        .type = MimeType{ .type = "text", .subtype = "plain", .parameter = WebParameter{
+            .key = "",
+            .value = "",
+        } },
+        .content = "kono dio da",
+    };
+
+    try sendResponse(connection, response);
 }
 
 fn receiveHeaders(allocator: mem.Allocator, connection: StreamServer.Connection) !*WebHeader {
@@ -67,4 +87,20 @@ fn receiveHeaders(allocator: mem.Allocator, connection: StreamServer.Connection)
     }
 
     return headers;
+}
+
+fn sendResponse(connection: StreamServer.Connection, response: WebResponse) !void {
+    var client_writer = connection.stream.writer();
+
+    const message = switch (response.code) {
+        200 => "OK",
+        404 => "Not Found",
+        403 => "Forbidden",
+        else => "Unknown",
+    };
+
+    try client_writer.print("{s} {} {s}\r\n", .{ response.version, response.code, message });
+    try client_writer.print("Content-Type: {s}/{s}\r\n", .{ response.type.type, response.type.subtype });
+    try client_writer.print("Content-Length: {}\r\n\r\n", .{response.content.len});
+    try client_writer.print("{s}", .{response.content});
 }
