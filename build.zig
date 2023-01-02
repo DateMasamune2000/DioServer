@@ -25,9 +25,14 @@ pub fn build(b: *std.build.Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+    const check_allocation_failures = b.option(bool, "check-allocation-failures", "Run tests with checkAllAllocationFailures (default: true)") orelse true;
+    const test_options = b.addOptions();
+    test_options.addOption(bool, "check_allocation_failures", check_allocation_failures);
+
     const exe_tests = b.addTest("src/main.zig");
     exe_tests.setTarget(target);
     exe_tests.setBuildMode(mode);
+    exe_tests.addOptions("test_options", test_options);
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&exe_tests.step);
