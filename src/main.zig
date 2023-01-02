@@ -16,19 +16,45 @@ pub fn main() !void {
 
     while (true) {
         const connection = try my_server.accept();
-        defer connection.stream.close();
         try handleClient(my_allocator, connection);
     }
 }
 
 fn handleClient(allocator: mem.Allocator, connection: StreamServer.Connection) !void {
-    var client_writer = connection.stream.writer();
+    defer connection.stream.close();
+
+    // var client_writer = connection.stream.writer();
     var client_reader = connection.stream.reader();
 
-    var a = try client_reader.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
-    defer (allocator.free(a));
+    var line = try client_reader.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
 
-    std.debug.print("{s}\n", .{a});
+    var first_line = mem.split(u8, line, " ");
+    const method = first_line.next().?;
+    const resource = first_line.next().?;
+    const protocol = first_line.next().?;
 
-    try client_writer.print("[SERVER_MESSAGE] {s}\r\n", .{a});
+    var headers = std.StringHashMap([]const u8).init(allocator);
+
+    std.debug.print("**HEADER**\nMethod: {s}\nResource: {s}\nProtocol: {s}\n", .{ method, resource, protocol });
+
+    while (true) {
+        line = try client_reader.readUntilDelimiterAlloc(allocator, '\n', std.math.maxInt(usize));
+        defer allocator.free(line);
+
+        if (line.len == 1 and mem.eql(u8, line, "\r")) break;
+
+        var this_line = mem.split(u8, line, ":");
+
+        const key = this_line.next().?;
+        var value = this_line.rest();
+
+        if (value[0] == ' ') value = value[1..value.len];
+
+        try headers.put(key, value);
+    }
+
+    var i = headers.iterator();
+    while (i.next()) |entry| {
+        std.debug.print("{s} : {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+    }
 }
