@@ -69,7 +69,14 @@ fn receiveHeaders(allocator: mem.Allocator, connection: StreamServer.Connection)
     var first_line = mem.split(u8, line, " ");
     var headers = try allocator.create(WebHeader);
     var hashmap = std.StringHashMap([]const u8).init(allocator);
-    headers.* = WebHeader{ .method = first_line.next().?, .resource = first_line.next().?, .version = first_line.next().?, .optionals_list = hashmap };
+
+    var a = first_line.next().?;
+    a = a[0..a.len];
+    var b = first_line.next().?;
+    b = b[0..b.len];
+    var c = first_line.next().?;
+    c = c[0..c.len];
+    headers.* = WebHeader{ .method = a, .resource = b, .version = c, .optionals_list = hashmap };
 
     std.debug.print("**HEADER**\nMethod: {s}\nResource: {s}\nProtocol: {s}\n", .{ headers.method, headers.resource, headers.version });
 
