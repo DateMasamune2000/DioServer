@@ -120,10 +120,9 @@ fn sendResponse(connection: StreamServer.Connection, response: WebResponse) !voi
 
     try client_writer.print("{s} {} {s}\r\n", .{ response.version, response.code, message });
     try client_writer.print("Content-Type: {s}/{s}", .{ response.type.type, response.type.subtype });
-    if (response.type.parameter != null) {
-        const temp = response.type.parameter.?;
-        try client_writer.print(";{s}={s}", .{ temp.key, temp.value });
+    if (response.type.parameter) |param| {
+        try client_writer.print(";{s}={s}", .{ param.key, param.value });
     }
-    try client_writer.print("Content-Length: {}\r\n\r\n", .{response.content.len});
+    try client_writer.print("\r\nContent-Length: {}\r\n\r\n", .{response.content.len});
     try client_writer.print("{s}", .{response.content});
 }
