@@ -1,2 +1,0 @@
-- Make it such that a new hashmap does not have to be created if there are no additional header fields.
-- Implement sending parameters in the response
